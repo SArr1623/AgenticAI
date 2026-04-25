@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FocusBoard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body>
+
+  <!-- Wallpaper Background Layer -->
+  <div id="wallpaper-bg" class="wallpaper-bg"></div>
+  <!-- Glassmorphism Overlay -->
+  <div class="bg-overlay"></div>
+
+  <!-- ===== ONBOARDING MODAL (First-time users) ===== -->
+  <div id="onboarding-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div class="modal-card">
+      <h1 id="onboarding-title" class="modal-title">Welcome to FocusBoard 🎯</h1>
+      <p class="modal-subtitle">Let's personalize your space in seconds.</p>
+      <div class="form-group">
+        <label for="input-name" class="form-label">What's your name?</label>
+        <input type="text" id="input-name" class="form-input" placeholder="e.g. Alex" maxlength="30" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="input-wallpaper" class="form-label">Upload a wallpaper <span class="optional">(optional)</span></label>
+        <label class="file-upload-label" for="input-wallpaper">
+          <span id="wallpaper-upload-text">Choose an image…</span>
+        </label>
+        <input type="file" id="input-wallpaper" class="file-input" accept="image/*" />
+      </div>
+      <button id="btn-onboarding-save" class="btn btn-primary">Let's Go →</button>
+    </div>
+  </div>
+
+  <!-- ===== DAILY FOCUS MODAL ===== -->
+  <div id="focus-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title">
+    <div class="modal-card">
+      <h2 id="focus-modal-title" class="modal-title">What's your main focus today? 🚀</h2>
+      <p class="modal-subtitle">One clear intention can change everything.</p>
+      <div class="form-group">
+        <input type="text" id="input-focus" class="form-input" placeholder="e.g. Finish the project proposal…" maxlength="100" autocomplete="off" />
+      </div>
+      <div class="form-group" style="flex-direction:row; align-items:center; gap:var(--space-4);">
+        <button id="btn-focus-save" class="btn btn-primary">Set My Focus</button>
+        <button id="btn-focus-skip" class="btn btn-link">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN DASHBOARD ===== -->
+  <main id="dashboard" class="dashboard hidden">
+
+    <!-- TOP BAR -->
+    <header class="top-bar">
+      <div class="weather-widget" id="weather-widget">
+        <span id="weather-icon" class="weather-icon">🌤</span>
+        <span id="weather-temp" class="weather-temp">--°</span>
+        <span id="weather-desc" class="weather-desc">Loading…</span>
+      </div>
+      <div class="top-bar-actions">
+        <button id="btn-notes" class="btn btn-icon" aria-label="Open Quick Notes" title="Quick Notes">📝</button>
+        <button id="btn-tracker" class="btn btn-icon" aria-label="View Site Time Tracker" title="Site Time Tracker">📊</button>
+        <button id="btn-focus-mode" class="btn btn-toggle" aria-pressed="false" title="Toggle Focus Mode">
+          <span class="toggle-icon">🎯</span>
+          <span id="focus-mode-label">Focus Mode</span>
+        </button>
+        <button id="btn-settings" class="btn btn-icon" aria-label="Open Settings" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <!-- HERO SECTION: Clock, Greeting, Focus -->
+    <section class="hero" aria-label="Main greeting and focus">
+      <p id="greeting" class="greeting">Good morning, …</p>
+      <div id="clock" class="clock" aria-live="polite">--:--</div>
+      <div id="daily-focus-display" class="daily-focus-display hidden">
+        <span class="focus-label">Today's Focus</span>
+        <input type="text" id="focus-text-input" class="focus-text form-input" style="background:transparent; border:none; text-align:center; padding:0;" placeholder="Set your focus for today" />
+        <button id="btn-set-now" class="btn-link hidden">Set now</button>
+      </div>
+      <div id="manifestation-display" class="manifestation-display">
+        <p id="manifestation-text" class="manifestation-text"></p>
+      </div>
+    </section>
+
+    <!-- TASK & READING LIST SECTION -->
+    <section class="task-section" aria-label="Task and Reading list" style="display: flex; gap: 1rem; align-items: flex-start; max-width: 1000px;">
+      <div class="task-card glass-card" style="flex: 1;">
+        <h2 class="task-title">Today's Tasks</h2>
+        <div class="task-input-row">
+          <input type="text" id="task-input" class="form-input task-input" placeholder="Add a new task…" maxlength="120" autocomplete="off" />
+          <button id="btn-add-task" class="btn btn-primary btn-sm" aria-label="Add task">+</button>
+        </div>
+        <ul id="task-list" class="task-list" aria-label="Task list" role="list"></ul>
+      </div>
+
+      <div class="task-card glass-card" style="flex: 1;">
+        <h2 class="task-title">Reading List</h2>
+        <div class="task-input-row">
+          <input type="text" id="reading-input" class="form-input task-input" placeholder="Paste article URL…" autocomplete="off" />
+          <button id="btn-add-reading" class="btn btn-primary btn-sm" aria-label="Add to reading list">+</button>
+        </div>
+        <ul id="reading-list" class="task-list" aria-label="Reading list" role="list"></ul>
+      </div>
+    </section>
+
+    <!-- PROGRESS TRACKING ICON -->
+    <div id="progress-widget" class="progress-widget hidden" aria-label="Daily productivity progress indicator" tabindex="0">
+      <svg width="80" height="80" viewBox="0 0 100 100" class="progress-rings">
+        <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none" />
+        <circle cx="50" cy="50" r="28" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none" />
+        <circle cx="50" cy="50" r="16" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none" id="progress-bg-focus-mode" />
+        
+        <circle cx="50" cy="50" r="40" stroke="#3b82f6" stroke-width="8" fill="none" stroke-linecap="round" class="ring-progress" id="ring-tasks" stroke-dasharray="251.2" stroke-dashoffset="251.2" />
+        <circle cx="50" cy="50" r="28" stroke="#a855f7" stroke-width="8" fill="none" stroke-linecap="round" class="ring-progress" id="ring-focus" stroke-dasharray="175.9" stroke-dashoffset="175.9" />
+        <circle cx="50" cy="50" r="16" stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round" class="ring-progress" id="ring-focus-mode" stroke-dasharray="100.5" stroke-dashoffset="100.5" />
+      </svg>
+      <div class="progress-tooltip glass-card">
+        <p style="color: #3b82f6; font-weight: 600;">Tasks: <span id="tt-tasks" style="color: var(--clr-text);">0/0</span></p>
+        <p style="color: #a855f7; font-weight: 600;">Focus: <span id="tt-focus" style="color: var(--clr-text);">Not set</span></p>
+        <p style="color: #22c55e; font-weight: 600;" id="tt-fm-container">Focus Mode: <span id="tt-fm" style="color: var(--clr-text);">Not used</span></p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== SETTINGS PANEL (Slide-in drawer) ===== -->
+  <aside id="settings-panel" class="settings-panel" aria-label="Settings">
+    <div class="settings-header">
+      <h2 class="settings-title">Settings</h2>
+      <button id="btn-close-settings" class="btn btn-icon" aria-label="Close settings">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="form-group">
+        <label for="settings-name" class="form-label">Your Name</label>
+        <input type="text" id="settings-name" class="form-input" maxlength="30" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="settings-wallpaper" class="form-label">Wallpaper</label>
+        <div style="display: flex; gap: 8px;">
+          <label class="file-upload-label" for="settings-wallpaper" style="flex:1;">
+            <span id="settings-wallpaper-text">Choose an image…</span>
+          </label>
+          <input type="file" id="settings-wallpaper" class="file-input" accept="image/*" />
+          <button id="btn-reset-wallpaper" class="btn btn-sm" style="border: 1px solid var(--clr-border);">Reset</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="settings-overlay" class="form-label">Overlay Intensity</label>
+        <input type="range" id="settings-overlay" min="0" max="0.6" step="0.1" value="0.4" style="width: 100%;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Blocked Websites</label>
+        <div class="blocked-sites-list" id="blocked-sites-list"></div>
+        <div class="task-input-row">
+          <input type="text" id="settings-blocked-input" class="form-input" placeholder="e.g. twitter.com" autocomplete="off" />
+          <button id="btn-add-blocked" class="btn btn-primary btn-sm" aria-label="Add blocked site">+</button>
+        </div>
+      </div>
+      <div class="form-group settings-toggle-row">
+        <label for="settings-manifestations" class="form-label">Manifestation Messages</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-manifestations" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Progress Tracking</label>
+        <div class="settings-toggle-row" style="margin-top: 0.5rem;">
+          <label for="settings-progress-icon" class="form-label" style="font-weight: 400; font-size: 0.9rem;">Enable Progress Icon</label>
+          <label class="toggle-switch"><input type="checkbox" id="settings-progress-icon" /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-toggle-row" style="margin-top: 0.5rem;">
+          <label for="settings-progress-anim" class="form-label" style="font-weight: 400; font-size: 0.9rem;">Show Animations</label>
+          <label class="toggle-switch"><input type="checkbox" id="settings-progress-anim" /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-toggle-row" style="margin-top: 0.5rem;">
+          <label for="settings-progress-fm" class="form-label" style="font-weight: 400; font-size: 0.9rem;">Show Focus Mode Ring</label>
+          <label class="toggle-switch"><input type="checkbox" id="settings-progress-fm" /><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stats</label>
+        <div style="font-size:0.9rem; color:var(--clr-text-muted);">
+          <p>Days with focus set: <span id="stat-days-focus">0</span></p>
+          <p>Tasks completed: <span id="stat-tasks-done">0</span></p>
+          <p>Blocked attempts: <span id="stat-blocked">0</span></p>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Focus History (Last 7 Days)</label>
+        <div id="history-list" style="font-size:0.85rem; color:var(--clr-text-muted); max-height: 150px; overflow-y:auto; padding-right: 5px; display:flex; flex-direction:column; gap:8px;">
+          <!-- history populated by settings.js -->
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reflect Mode Settings</label>
+        <div class="settings-toggle-row" style="margin-top: 0.5rem;">
+          <label for="settings-reflect-auto" class="form-label" style="font-weight: 400; font-size: 0.9rem;">Auto-quiz when turning off Focus Mode</label>
+          <label class="toggle-switch"><input type="checkbox" id="settings-reflect-auto" /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-toggle-row" style="margin-top: 0.5rem; justify-content: flex-start; gap: 1rem;">
+          <button id="btn-view-notes" class="btn btn-sm btn-secondary">View Learning Notes</button>
+          <button id="btn-clear-notes" class="btn btn-sm" style="border: 1px solid var(--clr-border);">Clear Notes</button>
+        </div>
+      </div>
+      <button id="btn-save-settings" class="btn btn-primary" style="margin-top: 1rem;">Save Settings</button>
+    </div>
+  </aside>
+  <div id="settings-backdrop" class="backdrop hidden"></div>
+
+  <!-- ===== QUICK NOTES MODAL ===== -->
+  <div id="notes-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="width: 80%; max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 class="modal-title" style="margin: 0;">Quick Notes 📝</h2>
+        <button id="btn-close-notes" class="btn btn-icon">✕</button>
+      </div>
+      <textarea id="quick-notes-area" class="form-input" style="flex: 1; resize: none; background: rgba(0,0,0,0.2); font-family: 'Inter', sans-serif; font-size: 1rem; line-height: 1.5; padding: 1rem;" placeholder="Start typing your scratch thoughts... (Auto-saves)"></textarea>
+    </div>
+  </div>
+
+  <!-- ===== REFLECT TRIGGER MODAL ===== -->
+  <div id="reflect-trigger-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 500px; text-align: center;">
+      <h2 class="modal-title">Before you switch gears, share your insights? 🧠</h2>
+      <p class="modal-subtitle">Summarizing what you learned helps solidify your knowledge.</p>
+      <div class="form-group" style="display:flex; flex-direction:column; gap: 0.75rem; margin-top: 1.5rem;">
+        <button id="btn-reflect-start" class="btn btn-primary">Start Reflection</button>
+        <button id="btn-reflect-skip" class="btn btn-secondary">Skip</button>
+        <button id="btn-reflect-never" class="btn btn-link" style="font-size: 0.85rem;">Don't ask again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REFLECT INSIGHT MODAL ===== -->
+  <div id="reflect-quiz-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 700px; min-height: 500px; width: 90%; display: flex; flex-direction: column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 class="modal-title" style="margin:0;">Reflect & Recalibrate</h2>
+        <span id="word-count" style="font-weight:600; color:var(--clr-accent);">0 / 150 words</span>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--clr-muted); margin-bottom: 1rem;">Type at least 150 words about what you've learned or accomplished during this focus session. No copy-pasting allowed.</p>
+      <textarea id="insight-textarea" 
+                style="flex:1; width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: var(--clr-text); padding: 1rem; font-family: var(--font-sans); line-height: 1.6; resize: none; outline: none;" 
+                placeholder="Start typing your insights here..."
+                spellcheck="false"></textarea>
+      <div style="display:flex; justify-content:space-between; margin-top: 1.5rem;">
+        <button id="btn-quiz-close" class="btn btn-secondary">Cancel</button>
+        <button id="btn-quiz-next" class="btn btn-primary" style="opacity: 0.5; pointer-events: none;">Finish Reflection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS Modules -->
+  <script type="module" src="scripts/main.js"></script>
+</body>
+</html>

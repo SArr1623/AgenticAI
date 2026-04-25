@@ -1,0 +1,15 @@
+# Local Extension Metadata
+_metadata/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary/Backup Files
+*.bak
+*.tmp
+PRD.md.txt
+upgradations_task.md

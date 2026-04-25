@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insights — FocusBoard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --clr-bg:      hsl(220, 22%, 8%);
+      --clr-accent:  hsl(258, 80%, 68%);
+      --clr-cyan:    hsl(196, 80%, 58%);
+      --clr-text:    hsl(220, 20%, 95%);
+      --clr-muted:   hsl(220, 15%, 60%);
+      --clr-glass:   hsla(220, 22%, 12%, 0.75);
+      --font-sans:   'Inter', system-ui, sans-serif;
+      --font-display:'Outfit', 'Inter', sans-serif;
+    }
+
+    .hidden { display: none !important; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--clr-bg);
+      color: var(--clr-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 40% 30%, hsla(258, 60%, 20%, 0.5) 0%, transparent 70%),
+                  radial-gradient(ellipse at 70% 80%, hsla(196, 60%, 15%, 0.4) 0%, transparent 60%);
+      z-index: -1;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0;
+      background: linear-gradient(135deg, var(--clr-accent), var(--clr-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .btn-close {
+      padding: 0.6rem 1.2rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      color: var(--clr-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .btn-close:hover { background: rgba(255,255,255,0.1); color: var(--clr-text); }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .metric-card {
+      background: var(--clr-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      position: relative;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--clr-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--clr-text);
+    }
+
+    .metric-change {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .change-up { color: #10b981; }
+    .change-down { color: #ef4444; }
+
+    /* Charts Section */
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .chart-card {
+      background: var(--clr-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .chart-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--clr-text);
+    }
+
+    /* Line Graph Component */
+    .chart-container {
+      display: flex;
+      height: 200px;
+      width: 100%;
+      gap: 10px;
+      position: relative;
+    }
+
+    .y-axis {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 160px; /* matches svg height */
+      padding-bottom: 20px; /* align with x-axis */
+      width: 40px;
+      color: var(--clr-muted);
+      font-size: 0.65rem;
+      text-align: right;
+    }
+
+    .graph-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .svg-wrapper {
+      height: 160px;
+      width: 100%;
+      position: relative;
+      border-left: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .svg-wrapper svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .x-axis {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding-left: 5px;
+    }
+
+    .x-label {
+      font-size: 0.65rem;
+      color: var(--clr-muted);
+      transform: translateX(-50%);
+    }
+
+    .line-path {
+      fill: none;
+      stroke: url(#line-gradient);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 4px 6px rgba(168, 85, 247, 0.3));
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: drawLine 2s ease-out forwards;
+    }
+
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .data-point {
+      fill: var(--clr-accent);
+      stroke: var(--clr-bg);
+      stroke-width: 2;
+      transition: r 0.2s;
+    }
+
+    .data-point:hover { r: 6; }
+
+    /* Insight Text */
+    .insight-box {
+      background: rgba(255,255,255,0.03);
+      padding: 1rem;
+      border-radius: 12px;
+      border-left: 3px solid var(--clr-accent);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--clr-text);
+    }
+
+    /* Site List */
+    .site-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .site-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .site-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .site-bar-container {
+      height: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .site-bar-fill {
+      height: 100%;
+      background: var(--clr-cyan);
+      border-radius: 999px;
+      transition: width 1s ease-out;
+    }
+
+    .site-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .site-meta {
+      font-size: 0.8rem;
+      color: var(--clr-muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--clr-glass);
+      border-radius: 24px;
+      color: var(--clr-muted);
+    }
+
+    @media (max-width: 600px) { .charts-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="bg-overlay"></div>
+  <div id="main-content" class="container hidden">
+    <div class="header">
+      <h1>Weekly Momentum</h1>
+      <button class="btn-close" onclick="window.close()">Close</button>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total Focus Time</span>
+        <span id="metric-total-focus" class="metric-value">0h 0m</span>
+        <span id="trend-focus" class="metric-change"></span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Focus Streak</span>
+        <span id="metric-streak" class="metric-value">0 days</span>
+        <span class="metric-change" style="color:var(--clr-muted)">Current Streak</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Peak Hour</span>
+        <span id="metric-peak-hour" class="metric-value">--</span>
+        <span class="metric-change" style="color:var(--clr-muted)">Most Active Time</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Consistency Score</span>
+        <span id="metric-consistency" class="metric-value">0%</span>
+        <span id="consistency-insight" class="metric-change"></span>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-row">
+      <!-- Daily Focus Chart -->
+      <div class="chart-card">
+        <span class="chart-title">Daily Focus Momentum (Last 8 Days)</span>
+        <div class="chart-container">
+          <div class="y-axis" id="daily-y-axis">
+            <span>240m</span>
+            <span>180m</span>
+            <span>120m</span>
+            <span>60m</span>
+            <span>0m</span>
+          </div>
+          <div class="graph-area">
+            <div class="svg-wrapper" id="daily-focus-chart">
+              <svg preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="var(--clr-accent)" />
+                    <stop offset="100%" stop-color="var(--clr-cyan)" />
+                  </linearGradient>
+                </defs>
+                <path class="line-path" id="graph-line" d="" />
+                <g id="graph-points"></g>
+              </svg>
+            </div>
+            <div class="x-axis" id="daily-x-axis">
+              <!-- dates injected here -->
+            </div>
+          </div>
+        </div>
+        <div id="insight-momentum" class="insight-box">Generating momentum insights...</div>
+      </div>
+
+      <!-- Hourly Distribution -->
+      <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="chart-title">Peak Activity by Hour</span>
+          <select id="day-selector" class="btn btn-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--clr-text); font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; outline: none;">
+            <option value="all">Last 8 Days (Avg)</option>
+          </select>
+        </div>
+        <div id="hourly-focus-chart" class="bar-chart" style="display: flex; align-items: flex-end; justify-content: space-between; height: 120px; gap: 4px;"></div>
+        <div id="insight-hourly" class="insight-box">Analyzing your peak performance...</div>
+      </div>
+    </div>
+
+    <!-- Top Sites Section -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <span class="chart-title">Most Visited Websites (% of total)</span>
+        <div id="site-list" class="site-list"></div>
+      </div>
+      <div class="chart-card">
+        <span class="chart-title">Time Spent per Task (Top 5)</span>
+        <div id="task-list" class="site-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="empty-state" class="container hidden">
+    <div class="empty-state">
+      <h1 style="background: none; -webkit-text-fill-color: var(--clr-text); font-size: 2rem; margin-bottom: 1rem;">No Momentum Yet 🚀</h1>
+      <p>Start a focus session to see your momentum insights and AI-powered productivity scores.</p>
+      <button class="btn-close" style="margin-top: 1.5rem;" onclick="window.close()">Close Window</button>
+    </div>
+  </div>
+
+  <script type="module" src="scripts/summary.js"></script>
+</body>
+</html>

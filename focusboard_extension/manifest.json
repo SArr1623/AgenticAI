@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "FocusBoard",
+  "version": "1.0.0",
+  "description": "A personal productivity dashboard that replaces your new tab with focus, tasks, and calm.",
+  "author": "FocusBoard",
+
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "geolocation",
+    "tabs",
+    "idle"
+  ],
+
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+
+  "chrome_url_overrides": {
+    "newtab": "dashboard.html"
+  },
+
+  "background": {
+    "service_worker": "scripts/background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "FocusBoard"
+  },
+
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "block_rules",
+        "enabled": true,
+        "path": "rules/block_rules.json"
+      }
+    ]
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "focus.html",
+        "summary.html",
+        "styles/focus_screen.css",
+        "assets/icons/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "icons": {
+    "16":  "assets/icons/icon16.png",
+    "48":  "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}

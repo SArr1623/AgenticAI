@@ -1,0 +1,150 @@
+/* focus_screen.css — Standalone styles for the blocked-site redirect page */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --clr-bg:      hsl(220, 22%, 8%);
+  --clr-accent:  hsl(258, 80%, 68%);
+  --clr-cyan:    hsl(196, 80%, 58%);
+  --clr-text:    hsl(220, 20%, 95%);
+  --clr-muted:   hsl(220, 15%, 60%);
+  --clr-text-muted: var(--clr-muted);
+  --clr-glass:   hsla(220, 22%, 12%, 0.85);
+  --clr-primary: var(--clr-accent);
+  --font-sans:   'Inter', system-ui, sans-serif;
+  --font-display:'Outfit', 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--clr-bg);
+  color: var(--clr-text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 40% 30%, hsla(258, 60%, 20%, 0.5) 0%, transparent 70%),
+              radial-gradient(ellipse at 70% 80%, hsla(196, 60%, 15%, 0.4) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.focus-screen {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.icon {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 0 20px hsla(258, 80%, 68%, 0.6));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.07); }
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--clr-accent), var(--clr-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.subtext {
+  font-size: 1rem;
+  color: var(--clr-muted);
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.focus-card {
+  background: hsla(220, 22%, 13%, 0.8);
+  border: 1px solid hsla(258, 40%, 60%, 0.2);
+  border-radius: 18px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  backdrop-filter: blur(12px);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.focus-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--clr-accent);
+  text-transform: uppercase;
+}
+
+.focus-message {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--clr-text);
+  line-height: 1.4;
+}
+
+.quote {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--clr-muted);
+  max-width: 420px;
+  line-height: 1.7;
+  border: none;
+}
+
+.btn-back {
+  margin-top: 0.5rem;
+  padding: 0.65rem 1.75rem;
+  background: hsla(220, 22%, 18%, 0.9);
+  border: 1px solid hsla(220, 14%, 30%, 0.8);
+  border-radius: 999px;
+  color: var(--clr-muted);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.btn-back:hover {
+  color: var(--clr-text);
+  border-color: var(--clr-accent);
+  transform: translateY(-1px);
+}
+
+.hidden { display: none !important; }
+
