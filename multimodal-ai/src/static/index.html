@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediShield AI Classifier</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-weight: 600;
+            font-size: 24px;
+        }
+
+        p {
+            font-weight: 300;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #fff;
+            color: #1e3c72;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 15px;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.05);
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        #result {
+            margin-top: 25px;
+            font-size: 20px;
+            font-weight: 600;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>MediShield Claim Scanner</h1>
+    <p>Upload a document to automatically classify it</p>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <span id="uploadText">Click to select an image or drag & drop</span>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)">
+        <img id="preview" alt="Preview">
+    </div>
+
+    <button class="upload-btn" id="submitBtn" style="display: none;" onclick="uploadImage()">Classify Document</button>
+
+    <div class="loader" id="loader"></div>
+    <div id="result"></div>
+</div>
+
+<script>
+    let selectedFile = null;
+
+    function handleFile(event) {
+        const file = event.target.files[0];
+        if (file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                document.getElementById('uploadText').style.display = 'none';
+                document.getElementById('submitBtn').style.display = 'inline-block';
+                document.getElementById('result').style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function uploadImage() {
+        if (!selectedFile) return;
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('submitBtn').style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        try {
+            const response = await fetch('/classify', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = `Result: ${data.category}`;
+            resultDiv.style.display = 'block';
+        } catch (error) {
+            alert('Error classifying document: ' + error);
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'inline-block';
+        }
+    }
+</script>
+
+</body>
+</html>

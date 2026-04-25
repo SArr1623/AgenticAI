@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+.vscode
+.claude/
+
+# Data and Outputs
+dataset/
+src/uploads/
+*.csv
+*.txt
+*.pdf
+!README.md
+!requirements.txt

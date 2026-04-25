@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  medishield-classifier:
+    build: .
+    container_name: medishield-classifier
+    ports:
+      - "8000:8000"
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      ENV: production
+      PORT: 8000
+    volumes:
+      - ./src/uploads:/app/src/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
