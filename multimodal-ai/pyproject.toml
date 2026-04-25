@@ -1,7 +1,7 @@
 [project]
 name = "multimodal-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-powered document classification system for insurance claims using Google Gemini's multimodal capabilities"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

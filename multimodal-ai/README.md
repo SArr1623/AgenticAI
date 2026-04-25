@@ -43,11 +43,81 @@ graph LR
    uv sync
    ```
 2. **Configure API Key**:
-   Create a `.env` file and add your `GOOGLE_API_KEY`.
+   Create a `.env` file based on `.env.example`:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your GOOGLE_API_KEY
+   ```
 3. **Run Pipeline**:
    ```bash
    python src/main.py --dataset dataset --output classification_results.csv
    ```
+
+## Production Deployment
+
+### Docker Deployment
+The application is containerized and ready for production deployment:
+
+```bash
+# Build the Docker image
+docker build -t medishield-classifier:latest .
+
+# Run with Docker Compose (recommended)
+docker-compose up -d
+```
+
+The application will be accessible at `http://localhost:8000`
+
+### Environment Configuration
+For production, set the following environment variables:
+- `GOOGLE_API_KEY`: Your Gemini API key (required)
+- `ENV`: Set to `production`
+- `PORT`: Server port (default: 8000)
+- `LOG_LEVEL`: Logging level (default: INFO)
+
+### Health Check
+The application includes a health check endpoint:
+```bash
+curl http://localhost:8000/health
+```
+
+## API Endpoints
+
+### GET `/health`
+Returns application health status
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "MediShield Document Classifier"
+}
+```
+
+### GET `/`
+Serves the web UI for document classification
+
+### POST `/classify`
+Classify a document image
+
+**Request:**
+- Content-Type: multipart/form-data
+- File: Document image (JPEG, PNG, GIF, WebP)
+- Max file size: 10MB
+
+**Response:**
+```json
+{
+  "filename": "document.jpg",
+  "category": "Patient Bills",
+  "method": "llm"
+}
+```
+
+**Error Responses:**
+- 400: Invalid file type or filename
+- 413: File size exceeds 10MB
+- 500: Classification error
 
 ## Tasks & Progress
 The detailed implementation plan can be found in the [tasks.md](file:///C:/Users/sans/.gemini/antigravity/brain/edc3de68-cd4e-4efc-9f15-67986e377aab/tasks.md) artifact.
