@@ -21,17 +21,10 @@ Generates source-cited, context-grounded answers via GPT-4o-mini.
 
 Ensures medical accuracy and disclaimers in responses.
 
-Installation
-
-Clone the repository:
-
-git clone https://github.com/yourusername/medical-rag-assistant.git
-
 
 Create a virtual environment and activate it:
 
 python -m venv venv
-source venv/bin/activate  # Linux/macOS
 venv\Scripts\activate     # Windows
 
 
