@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  MediShield AI Document Classifier deployed as an AWS Lambda function via FastAPI and Mangum
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+
+Resources:
+  MediShieldApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      BinaryMediaTypes:
+        - "multipart/form-data"
+        - "image/jpeg"
+        - "image/png"
+        - "image/gif"
+        - "image/webp"
+
+  MediShieldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.app.handler
+      Runtime: python3.13
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          GOOGLE_API_KEY: !Ref GoogleApiKey
+          GEMINI_MODEL: !Ref GeminiModel
+          ENV: production
+          LANGFUSE_PUBLIC_KEY: !Ref LangfusePublicKey
+          LANGFUSE_SECRET_KEY: !Ref LangfuseSecretKey
+          LANGFUSE_HOST: !Ref LangfuseHost
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref MediShieldApi
+        RootApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref MediShieldApi
+
+Parameters:
+  GoogleApiKey:
+    Type: String
+    Description: Gemini API Key for document classification
+    NoEcho: true
+
+  GeminiModel:
+    Type: String
+    Description: Gemini/Gemma model to use for classification
+    Default: gemini-3-flash-preview
+
+  LangfusePublicKey:
+    Type: String
+    Description: Langfuse Public Key for LLM observability
+    Default: ""
+    NoEcho: false
+
+  LangfuseSecretKey:
+    Type: String
+    Description: Langfuse Secret Key for LLM observability
+    Default: ""
+    NoEcho: true
+
+  LangfuseHost:
+    Type: String
+    Description: Langfuse host endpoint (US/EU/self-hosted)
+    Default: "https://us.cloud.langfuse.com"
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Production stage"
+    Value: !Sub "https://${MediShieldApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

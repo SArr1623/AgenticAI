@@ -7,11 +7,18 @@ import shutil
 import logging
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from src.utils.image_utils import get_image_mime_type
 from google import genai
 from google.genai import types
+import base64
 from dotenv import load_dotenv
+from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from mangum import Mangum
 
 load_dotenv()
 
@@ -28,6 +35,13 @@ if not GOOGLE_API_KEY:
     logger.error("GOOGLE_API_KEY environment variable not set")
     raise ValueError("GOOGLE_API_KEY is required. Please set it in .env file.")
 
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+
+# Langfuse observability config
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY", "")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "")
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+
 app = FastAPI(
     title="MediShield Document Classifier",
     description="AI-powered document classification system for insurance claims",
@@ -43,11 +57,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create directories
-os.makedirs("src/static", exist_ok=True)
-os.makedirs("src/uploads", exist_ok=True)
+# OpenTelemetry Tracing Setup — exports to Langfuse when keys are configured
+provider = TracerProvider()
 
-app.mount("/static", StaticFiles(directory="src/static"), name="static")
+if LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY:
+    _auth = base64.b64encode(
+        f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()
+    ).decode()
+    _exporter = OTLPSpanExporter(
+        endpoint=f"{LANGFUSE_HOST}/api/public/otel/v1/traces",
+        headers={
+            "Authorization": f"Basic {_auth}",
+            "x-langfuse-ingestion-version": "4",
+        },
+    )
+    logger.info(f"Langfuse tracing enabled → {LANGFUSE_HOST}")
+else:
+    _exporter = ConsoleSpanExporter()
+    logger.warning("LANGFUSE keys not set — falling back to console exporter")
+
+processor = BatchSpanProcessor(_exporter)
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)
+
+# Instrument FastAPI
+FastAPIInstrumentor.instrument_app(app)
+
+# In AWS Lambda, the root filesystem is read-only, so we only create these locally.
+# We check if we are in an AWS environment.
+IS_AWS = bool(os.environ.get("AWS_EXECUTION_ENV") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+
+if not IS_AWS:
+    os.makedirs("src/static", exist_ok=True)
+    os.makedirs("src/uploads", exist_ok=True)
+
+# Mount static files (will work in Lambda because the files are packaged)
+if os.path.exists("src/static"):
+    app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 # Configuration
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
@@ -121,87 +168,105 @@ def classify_with_llm(image_bytes: bytes, mime_type: str) -> str:
     - Do not provide any explanation or markdown formatting.
     """
     
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=[
-                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                types.Part.from_text(text=prompt)
-            ]
-        )
-        category = response.text.strip()
-        
-        # Validate and normalize response
-        if category not in CATEGORIES:
-            # Fuzzy matching for common variations
-            category_lower = category.lower()
-            for cat in CATEGORIES:
-                if cat.lower() in category_lower:
-                    category = cat
-                    break
-            else:
-                category = "Unknown"
-        
-        logger.info(f"Classification successful: {category}")
-        return category
-        
-    except Exception as e:
-        logger.error(f"LLM classification failed: {str(e)}")
-        raise DocumentClassificationError(f"Classification failed: {str(e)}")
+    logger.info(f"Classifying image with size: {len(image_bytes)} bytes and MIME type: {mime_type}")
+    with tracer.start_as_current_span("gemini_llm_call") as span:
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    types.Part.from_text(text=prompt)
+                ]
+            )
+            category = response.text.strip()
+            
+            # Token usage logging
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                metadata = response.usage_metadata
+                logger.info(f"Token Usage - Prompt: {metadata.prompt_token_count}, Candidates: {metadata.candidates_token_count}, Total: {metadata.total_token_count}")
+                span.set_attribute("llm.usage.prompt_tokens", getattr(metadata, "prompt_token_count", 0))
+                span.set_attribute("llm.usage.completion_tokens", getattr(metadata, "candidates_token_count", 0))
+                span.set_attribute("llm.usage.total_tokens", getattr(metadata, "total_token_count", 0))
+            
+            # Validate and normalize response
+            if category not in CATEGORIES:
+                # Fuzzy matching for common variations
+                category_lower = category.lower()
+                for cat in CATEGORIES:
+                    if cat.lower() in category_lower:
+                        category = cat
+                        break
+                else:
+                    category = "Unknown"
+            
+            logger.info(f"Classification successful: {category}")
+            span.set_attribute("llm.classification_result", category)
+            return category
+            
+        except Exception as e:
+            logger.error(f"LLM classification failed: {str(e)}")
+            span.record_exception(e)
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+            raise DocumentClassificationError(f"Classification failed: {str(e)}")
 
 @app.post("/classify")
-async def classify_image(file: UploadFile = File(...)):
-    """Classify an uploaded document image"""
-    file_path = None
+async def classify_images(files: List[UploadFile] = File(...)):
+    """Classify multiple uploaded document images"""
+    results = []
     
-    try:
-        # Validate file before processing
-        validate_image_file(file)
-        logger.info(f"Processing file: {file.filename}")
-        
-        # Heuristic: Check filename pattern first to save API calls
-        if file.filename.lower().startswith("bill_innovh"):
-            logger.info(f"Heuristic match for {file.filename}")
-            return {
+    for file in files:
+        file_path = None
+        try:
+            # Validate file before processing
+            validate_image_file(file)
+            logger.info(f"Processing file: {file.filename}")
+            
+            # Heuristic: Check filename pattern first to save API calls
+            if file.filename.lower().startswith("bill_innovh"):
+                logger.info(f"Heuristic match for {file.filename}")
+                results.append({
+                    "filename": file.filename,
+                    "category": "Patient Bills",
+                    "method": "heuristic"
+                })
+                continue
+            
+            # Save to temporary directory
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_file:
+                shutil.copyfileobj(file.file, tmp_file)
+                file_path = tmp_file.name
+            
+            # Read and classify
+            with open(file_path, "rb") as f:
+                image_bytes = f.read()
+            
+            mime_type = file.content_type
+            category = classify_with_llm(image_bytes, mime_type)
+            
+            results.append({
                 "filename": file.filename,
-                "category": "Patient Bills",
-                "method": "heuristic"
-            }
-        
-        # Save to temporary directory
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_file:
-            shutil.copyfileobj(file.file, tmp_file)
-            file_path = tmp_file.name
-        
-        # Read and classify
-        with open(file_path, "rb") as f:
-            image_bytes = f.read()
-        
-        mime_type = get_image_mime_type(file_path)
-        category = classify_with_llm(image_bytes, mime_type)
-        
-        return {
-            "filename": file.filename,
-            "category": category,
-            "method": "llm"
-        }
-        
-    except HTTPException:
-        raise
-    except DocumentClassificationError as e:
-        logger.error(f"Classification error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Unexpected error during classification: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-    
-    finally:
-        # Clean up temporary file
-        if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                logger.warning(f"Failed to clean up temporary file: {str(e)}")
+                "category": category,
+                "method": "llm"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error classifying {file.filename}: {str(e)}")
+            results.append({
+                "filename": file.filename,
+                "error": str(e)
+            })
+        finally:
+            # Clean up temporary file
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    logger.warning(f"Failed to clean up temporary file: {str(e)}")
+                    
+    return {"results": results}
+
+# AWS Lambda Handler
+handler = Mangum(app)
 
 if __name__ == "__main__":
     import uvicorn

@@ -120,4 +120,4 @@ Classify a document image
 - 500: Classification error
 
 ## Tasks & Progress
-The detailed implementation plan can be found in the [tasks.md](file:///C:/Users/sans/.gemini/antigravity/brain/edc3de68-cd4e-4efc-9f15-67986e377aab/tasks.md) artifact.
+The detailed implementation progress is tracked via the project roadmap. See [RESOURCES.md](RESOURCES.md) for more details.

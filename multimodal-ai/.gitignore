@@ -20,3 +20,9 @@ src/uploads/
 *.pdf
 !README.md
 !requirements.txt
+# AWS SAM
+.aws-sam/
+build.toml
+
+# Local Scratch files
+scratch/
